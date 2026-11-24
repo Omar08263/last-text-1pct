@@ -1,45 +1,42 @@
-"""Last Text at One Percent — entry program (program/v1, Python 3.13, stdlib only).
+"""One last text from a phone running on a single percent.
 
-Writes one original funny line (a single line, 1-200 characters) to
-/output/entry.txt (or $MAKEFUN_OUTPUT_DIR/entry.txt when set, for local runs).
-Deterministic: the same bytes on every run; no network, no randomness,
-no reads outside this file. The file holds the line with no trailing
-newline: the gate counts characters, and a trailing newline would be a
-second, empty line in the judge's eyes.
+This program emits a single original message — the funniest last text a
+dying phone sends — into /output/entry.txt, or into $MAKEFUN_OUTPUT_DIR
+when the grader points elsewhere. The same bytes come out on every run:
+no network access, no randomness, nothing read from outside this file.
 """
 
+from pathlib import Path
 import os
 
-LINE = "Deleting myself now. Your alarm for tomorrow goes with me. Sleep in."
-
-# Gate the line itself: one line, 1-200 characters, not only whitespace.
-MAX_CHARS = 200
-assert 1 <= len(LINE) <= MAX_CHARS, f"line is {len(LINE)} chars, must be 1-{MAX_CHARS}"
-assert LINE.strip(), "line must not be only whitespace"
-assert "\n" not in LINE, "line must be a single line"
+TEXT = "Deleting myself now. Your alarm for tomorrow goes with me. Sleep in."
+# No trailing newline: the gate counts characters, and one would add an
+# empty second line the judge would read as part of the message.
+LIMIT = 200
 
 
-def main() -> None:
-    # An empty MAKEFUN_OUTPUT_DIR (exported but blank) must not break the
-    # run: fall back to the harness default /output, as the grader provides.
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
-    os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, "entry.txt")
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(LINE)
-    # Deterministic permissions for the grader: the entry must be readable
-    # (0644) no matter what umask the sandbox runs with.
-    os.chmod(path, 0o644)
-    # Read-back check: the file on disk must hold exactly the approved
-    # line, byte for byte; otherwise fail loudly, never silently.
-    with open(path, "rb") as f:
-        written_bytes = f.read()
-    if written_bytes != LINE.encode("utf-8"):
-        raise SystemExit("entry.txt bytes do not match the approved line")
-    with open(path, "r", encoding="utf-8", newline="\n") as f:
-        written = f.read()
-    if written != LINE:
-        raise SystemExit("entry.txt does not match the approved line")
+def _check(text):
+    if not text.strip():
+        raise SystemExit("the message must not be blank")
+    if "\n" in text or "\r" in text:
+        raise SystemExit("the message must be one line")
+    if len(text) > LIMIT:
+        raise SystemExit(f"the message is {len(text)} characters, over the {LIMIT} limit")
+
+
+def _destination():
+    chosen = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+    return Path(chosen) / "entry.txt"
+
+
+def main():
+    _check(TEXT)
+    target = _destination()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(TEXT.encode("utf-8"))
+    target.chmod(0o644)
+    if target.read_bytes() != TEXT.encode("utf-8"):
+        raise SystemExit("entry.txt does not hold the approved message")
 
 
 if __name__ == "__main__":
