@@ -3,7 +3,9 @@
 Writes one original funny line (a single line, 1-200 characters) to
 /output/entry.txt (or $MAKEFUN_OUTPUT_DIR/entry.txt when set, for local runs).
 Deterministic: the same bytes on every run; no network, no randomness,
-no reads outside this file.
+no reads outside this file. The file holds the line with no trailing
+newline: the gate counts characters, and a trailing newline would be a
+second, empty line in the judge's eyes.
 """
 
 import os
